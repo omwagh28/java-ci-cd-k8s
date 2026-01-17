@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: java-app
-          image: waghom/java-ci-cd-k8s:latest
+          image: waghom/java-ci-cd-k8s:v8
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
