@@ -44,3 +44,4 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/java-ci-cd-k8s:${{ github.sha }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/java-ci-cd-k8s:latest
+
