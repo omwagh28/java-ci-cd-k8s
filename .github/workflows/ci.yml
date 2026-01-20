@@ -9,8 +9,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      security-events: write
+
     steps:
-      # 1. Checkout source code
+      # 1. Checkout
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -21,27 +25,38 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      # 3. Build & test
-      - name: Build with Maven
-        run: mvn clean package
+      # 3. Run Tests
+      - name: Run Unit Tests
+        run: mvn test
 
-      # 4. Login to DockerHub
+      # 4. Build Application
+      - name: Build with Maven
+        run: mvn clean package -DskipTests
+
+      # 5. Login to DockerHub
       - name: Login to DockerHub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 5. Build Docker image
-      - name: Build Docker image
+      # 6. Build Docker Image
+      - name: Build Docker Image
         run: |
           docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/java-ci-cd-k8s:${{ github.sha }} .
           docker tag ${{ secrets.DOCKERHUB_USERNAME }}/java-ci-cd-k8s:${{ github.sha }} \
                      ${{ secrets.DOCKERHUB_USERNAME }}/java-ci-cd-k8s:latest
 
-      # 6. Push Docker image
-      - name: Push Docker image
+      # 7. Container Image Scan (Trivy)
+      - name: Scan Docker Image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/java-ci-cd-k8s:${{ github.sha }}
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      # 8. Push Image
+      - name: Push Docker Image
         run: |
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/java-ci-cd-k8s:${{ github.sha }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/java-ci-cd-k8s:latest
-
