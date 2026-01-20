@@ -1,189 +1,262 @@
-# Java CI/CD Pipeline using GitHub Actions, Docker & Kubernetes
+🚀 Java CI/CD Pipeline with Docker & Kubernetes (GitHub Actions)
+📌 Project Overview
 
-## 📌 Project Overview
-This project implements a **complete CI/CD pipeline** for a Java Spring Boot application using **GitHub Actions**, **Docker**, and **Kubernetes (local cluster)**.
+This project demonstrates an end-to-end production-style CI/CD pipeline for a Java Spring Boot application using:
 
-The goal is to demonstrate how modern DevOps practices automate:
-- Build
-- Test
-- Containerization
-- Deployment
+GitHub Actions for CI & CD
 
-with minimal manual intervention and high reliability.
+Docker for containerization
 
----
+Docker Hub for image registry
 
-## 🎯 Problem Background & Motivation
-Traditional manual deployments are:
-- Error-prone
-- Time-consuming
-- Not scalable
+Kubernetes (Docker Desktop / Minikube) for deployment
 
-As applications grow, teams need a reliable way to:
-- Automatically validate code
-- Ensure consistent builds
-- Deploy changes safely
+The goal is not just to “make the build pass”, but to apply DevOps & DevSecOps best practices such as:
 
-This project solves these problems by introducing an **automated CI/CD pipeline** where every code change goes through standardized stages before deployment.
+Automated testing
 
----
+Code quality enforcement
 
-## 🧩 Application Overview
-- **Language:** Java  
-- **Framework:** Spring Boot  
-- **Endpoint:** `/health`  
-- **Purpose:** Display application version to verify deployment changes  
+Security scanning
+
+Container validation
+
+Reliable deployments
+
+🧩 Application Details
+
+Language: Java
+
+Framework: Spring Boot
+
+Endpoint:
+
+GET /health
 
 
----
+Purpose: Simple health/version API to verify CI/CD-driven deployments
 
-## 🏗️ CI/CD Architecture (High Level)
+Example response:
 
-Developer
-|
-| git push
-v
-GitHub Repository
-|
-| GitHub Actions (CI)
-v
+Application is healthy – VERSION 9
+
+📂 Project Structure
+java-ci-cd-k8s/
+├── .github/workflows/
+│   ├── ci.yml        # Continuous Integration pipeline
+│   └── cd.yml        # Continuous Deployment pipeline
+├── k8s/
+│   ├── deployment.yaml
+│   └── service.yaml
+├── src/
+│   └── main/java/com/example/demo/
+│       ├── DemoApplication.java
+│       └── HealthController.java
+├── Dockerfile
+├── pom.xml
+├── README.md
+
+🐳 Dockerfile – Containerization
+
+The Dockerfile defines how the Java application is packaged into a Docker image.
+
+Key responsibilities:
+
+Use a JDK base image
+
+Copy application JAR
+
+Expose port 8080
+
+Start the Spring Boot application
+
+⚠️ Only runtime files are included
+❌ Kubernetes files, GitHub workflows, etc. are NOT inside the image
+
+☸️ Kubernetes Configuration
+🔹 deployment.yaml
+
+Defines how many pods to run
+
+Specifies which Docker image to pull
+
+Controls rollout and updates
+
+Key fields:
+
+image: waghom/java-ci-cd-k8s:latest
+imagePullPolicy: Always
+
+🔹 service.yaml
+
+Exposes the application using NodePort
+
+Routes traffic from:
+
+localhost:30080 → pod:8080
+
+
+Service is usually created once, deployments change frequently.
+
+⚙️ CI Pipeline (ci.yml) – Continuous Integration
+CI triggers on:
+
+Push to main
+
+Manual trigger (workflow_dispatch)
+
+CI Stages Implemented
+
+Checkout Code
+
+Setup Java (Temurin)
+
+Maven Build & Tests
+
+Code Quality Check
+
+Checkstyle
+
+Security Scans
+
+CodeQL (SAST)
+
+OWASP Dependency Check (SCA)
+
 Docker Image Build
-|
-| Push Image
-v
-DockerHub
-|
-| GitHub Actions (CD)
-v
-Kubernetes Deployment
-|
-v
-Kubernetes Service (NodePort)
-|
-v
-Browser (localhost)
 
+Container Vulnerability Scan
 
----
+Trivy (HIGH / CRITICAL)
 
-## 🔁 Continuous Integration (CI)
+Container Smoke Test
 
-### Trigger
-- Push to `main` branch
-- Manual workflow trigger
+Push Image to Docker Hub
 
-### CI Stages
-1. Checkout source code
-2. Setup Java & Maven
-3. Run unit tests
-4. Build application JAR
-5. Build Docker image using Dockerfile
-6. Push Docker image to DockerHub
+:latest
 
-CI ensures:
-- Code quality
-- Build consistency
-- Early failure detection
+:${GITHUB_SHA}
 
----
+📌 CI Responsibility ends at Docker image push
 
-## 🚀 Continuous Deployment (CD)
+🚀 CD Pipeline (cd.yml) – Continuous Deployment
+CD triggers:
 
-### CD Responsibilities
-1. Pull latest Docker image
-2. Apply Kubernetes deployment
-3. Perform rolling update of pods
-4. Keep service endpoint stable
+After successful CI
 
-Deployment updates occur **without downtime**.
+Or manual trigger
 
----
+CD Steps:
 
-## 🐳 Dockerfile Role
-The Dockerfile defines:
-- Base Java runtime
-- Application JAR inclusion
-- Container startup command
+Configure Kubernetes access
 
-It ensures the application runs identically across environments.
+Apply Kubernetes manifests:
 
----
-
-## ☸️ Kubernetes Role
-
-### Deployment
-- Manages pods
-- Handles rolling updates
-- Ensures desired replica count
-
-### Service
-- Exposes application via NodePort
-- Routes traffic to active pods
-- Keeps endpoint stable while pods change
-
----
-
-## 🔐 Security & Quality Controls
-- DockerHub credentials stored as GitHub Secrets
-- No secrets hardcoded in repository
-- Pipeline fails on build/test errors
-- Controlled image pull using `imagePullPolicy`
-
----
-
-## 🖥️ How to Run Locally
-
-### Prerequisites
-- Docker Desktop
-- Kubernetes enabled in Docker Desktop
-- kubectl installed
-
-### Steps
-```bash
 kubectl apply -f k8s/deployment.yaml
 kubectl apply -f k8s/service.yaml
 
-Access the application:
+
+Restart deployment if using latest tag:
+
+kubectl rollout restart deployment java-app
+
+
+📌 CD responsibility = deploy image to Kubernetes
+
+🔁 How Code Changes Reach the Browser
+
+Modify Java code (HealthController)
+
+Commit & push to GitHub
+
+CI runs
+
+Tests + security checks
+
+Docker image built & pushed
+
+Kubernetes pulls new image
+
+Old pod terminated, new pod created
+
+Service routes traffic to new pod
+
+Changes visible at:
+
 http://localhost:30080/health
 
+🔐 Secrets Configuration (Mandatory)
 
-🔑 GitHub Secrets Configuration
-
-Configured in:
-GitHub Repository → Settings → Secrets → Actions
+Configured in GitHub Repository → Settings → Secrets → Actions
 
 Secret Name	Purpose
-DOCKERHUB_USERNAME	DockerHub login
-DOCKERHUB_TOKEN	DockerHub access token
+DOCKERHUB_USERNAME	Docker Hub username
+DOCKERHUB_TOKEN	Docker Hub access token
+
+⚠️ Secrets are never hardcoded
+
+🧪 How to Run Locally (Manual)
+kubectl apply -f k8s/deployment.yaml
+kubectl apply -f k8s/service.yaml
+kubectl get pods
+kubectl get svc
+
+
+Open:
+
+http://localhost:30080/health
+
 📊 Results & Observations
 
-Automated deployments reduce human error
+CI catches bugs early (tests + lint)
+
+Security issues surfaced before deployment
+
+Docker images validated before push
 
 Kubernetes ensures zero-downtime updates
 
-CI/CD improves development speed
-
-Clear separation of build and deploy responsibilities
+Clear separation of CI and CD responsibilities
 
 ⚠️ Limitations & Future Improvements
-Current Limitations
 
-Local Kubernetes cluster only
+CD to local Kubernetes only (no cloud yet)
 
-No cloud load balancer
+Can be extended to:
 
-No monitoring stack
+AWS EKS
 
-Future Improvements
+DockerHub → ECR
 
-Deploy to AWS EKS
+Helm charts
 
-Use Ingress instead of NodePort
+Canary / Blue-Green deployments
 
-Add security scans (Trivy, CodeQL)
+🧠 Key DevOps Learnings
 
-Add monitoring (Prometheus, Grafana)
+CI ≠ CD
 
-🏁 Conclusion
+Docker builds are immutable
 
-This project demonstrates how CI/CD pipelines improve software delivery by combining automation, containerization, and orchestration using modern DevOps tools.
+Kubernetes does not “know” CI finished — CD triggers it
+
+Services stay stable, pods are replaceable
+
+Automation > manual operations
+
+🔗 GitHub Repository
+
+👉 Repo URL:
+https://github.com/omwagh28/java-ci-cd-k8s
+
+🏁 Final Note (Evaluator Friendly)
+
+This project demonstrates:
+
+Thoughtful CI/CD stage ordering
+
+DevSecOps practices
+
+Clean Kubernetes deployments
+
+Real-world DevOps reasoning
