@@ -8,6 +8,6 @@ public class HealthController {
 
     @GetMapping("/health")
     public String health() {
-        return "What's up";    
+        return "Application is healthy - VERSION 12";    
     }
 }
